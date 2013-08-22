@@ -1,0 +1,50 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:gravity="center_vertical"
+>
+<!-- 
+    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:gravity="center"
+        android:background="@drawable/background_border">
+
+     
+        <Spinner
+            android:id="@+id/spinner_device"
+            android:layout_width="match_parent"
+            android:layout_height="40dip"
+            android:prompt="@string/select_device" >
+        </Spinner>
+
+        <Button
+            android:id="@+id/button_connect"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@id/spinner_device"
+            android:onClick="connect"
+            android:text="@string/connect_button" >
+        </Button>
+
+        <Button
+            android:id="@+id/button_cancel"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_below="@id/spinner_device"
+            android:onClick="cancel"
+            android:text="@string/cancel_button" >
+        </Button>
+
+        <TextView
+            android:id="@+id/setup_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@id/button_connect" />
+    </RelativeLayout>
+ -->
+</LinearLayout>
