@@ -68,7 +68,7 @@ public class FireCastSession {
 		mSession.setListener(new SessionListener());
 
 		try {
-			mSession.startSession("21680b98-7a4f-4afe-929a-2f0d69dffeb6");
+			mSession.startSession("App Id");
 		} catch (IOException e) {
 			System.err.println(e);
 		}
