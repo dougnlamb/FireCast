@@ -1,7 +1,7 @@
 FireCast
 ========
 
-A demo Android App for casting device videos, mp3s and images
+A demo Android App for casting device videos, mp3s and images.  View YouTube demo: http://www.youtube.com/watch?v=OHJpr1Qg5sc
 
 TODO: 
 -----
