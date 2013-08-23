@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head runat="server">
+    <title>MediaDisplay</title>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="https://www.gstatic.com/cast/js/receiver/1.0/cast_receiver.js"> </script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/1.10.2/TweenMax.min.js"></script>
+    <script type="text/javascript">
+
+        $(function () {
+
+            function displayMessage(msg, timeout) {
+                $('#messages').html(msg);
+                if (timeout != 0) {
+                    setTimeout(function () {
+                        $('#messages').html('');
+                    }, timeout);
+                }
+            }
+
+            var receiver = new cast.receiver.Receiver('21680b98-7a4f-4afe-929a-2f0d69dffeb6', ['com.google.plus.dougnlamb.firecast']),
+			channelHandler = new cast.receiver.ChannelHandler('com.google.plus.dougnlamb.firecast'),
+			$messages = $('.messages'),
+			$body = $('body');
+
+            channelHandler.addChannelFactory(
+			receiver.createChannelFactory('com.google.plus.dougnlamb.firecast'));
+
+            receiver.start();
+
+            channelHandler.addEventListener(cast.receiver.Channel.EventType.MESSAGE, onMessage.bind(this));
+            channelHandler.addEventListener(cast.receiver.Channel.EventType.CLOSED, onChannelClosed.bind(this));
+
+            function onChannelClosed(event) {
+                if (channelHandler.getChannels().length == 0) {
+                    window.close();
+                }
+            }
+
+            function onMessage(event) {
+                try {
+                    var cmd = event.message.command;
+
+                    if (cmd === "newmedia") {
+                        var url = event.message.url + '?' + Date.now();
+                        var mimetype = event.message.mimetype;
+                        var $castPic = $('.cast-pic');
+                        var $video = $('#vid');
+
+                        if (mimetype == "video/mp4" || mimetype == "video/3gp") {
+                            $castPic.hide();
+                            document.getElementById("aud").pause();
+                            $('#audio-source').attr('src', '');
+                            $video.show();
+                            $('#video-source').attr('src', url);
+                            $('#video-source').attr('type', mimetype);
+                            document.getElementById('vid').load();
+                            document.getElementById('vid').play();
+                            displayMessage('Playing new video', 2000);
+                        }
+                        else if (mimetype == "audio/mp3") {
+                            document.getElementById("vid").pause();
+                            $('#video-source').attr('src', '');
+                            $('#audio-source').attr('src', url);
+                            document.getElementById('aud').load();
+                            document.getElementById('aud').play();
+                            displayMessage('Playing new song', 2000);
+                        }
+                        else {
+                            document.getElementById("vid").pause();
+                            $video.hide();
+
+                            var $newImage = $('<img>');
+                            displayMessage('Loading image...', 0);
+
+                            $newImage.on('load', function () {
+
+                                var orientation = event.message.orientation;
+
+                                //                                $castPic.fadeOut('slow', function () {
+                                var showNextImage = function () {
+                                    $('#container').removeClass('orientation-0');
+                                    $('#container').removeClass('orientation-90');
+                                    $('#container').removeClass('orientation-180');
+                                    $('#container').removeClass('orientation-270');
+                                    $('#container').addClass('orientation-' + orientation);
+
+                                    displayMessage('', 0);
+
+                                    document.getElementById('container').innerHTML = '';
+
+                                    $newImage.css('opacity', 0);
+                                    $('#container').append($newImage);
+
+                                    $newImage.addClass('cast-pic');
+                                    var imgClass = "";
+                                    if (orientation == 90 || orientation == 270) {
+                                        imgClass = (this.height / this.width > 1) ? 'wide' : 'tall';
+                                    }
+                                    else {
+                                        imgClass = (this.width / this.height > 1) ? 'wide' : 'tall';
+                                    }
+                                    $newImage.addClass(imgClass);
+                                    TweenLite.to($newImage, 2, { autoAlpha: 1 });
+                                    //    $newImage.fadeIn('slow');
+                                }
+
+                                TweenLite.to($castPic, 2, { autoAlpha: 0, onComplete: showNextImage });
+                                //                                });
+                            });
+
+                            $newImage.attr('src', url);
+                        }
+                    }
+                    else if (cmd === "play") {
+                        document.getElementById("vid").play();
+                        displayMessage('Playing', 2000);
+                    }
+                    else if (cmd === "pause") {
+                        document.getElementById("vid").pause();
+                        displayMessage('Paused', 0);
+                    }
+                    else if (cmd === "seek") {
+                        if (event.message.time < 0) {
+                            document.getElementById("vid").currentTime = 0;
+                            displayMessage('Restarting', 2000);
+                        }
+                        else {
+                            document.getElementById("vid").currentTime += event.message.time;
+                            displayMessage('Forward ' + (event.message.time) + ' seconds.', 2000);
+                        }
+                    }
+                }
+                catch (ex) {
+                }
+            }
+        });
+
+    </script>
+    <style>
+        body
+        {
+            background-color: #222222;
+            text-align: center;
+        }
+        #container
+        {
+            width: 80%;
+            height: 80%;
+            background: transparent;
+            margin: auto;
+        }
+        #container img.wide
+        {
+            max-width: 100%;
+            max-height: 100%;
+            height: auto;
+        }
+        #container img.tall
+        {
+            max-height: 100%;
+            max-width: 100%;
+            width: auto;
+        }
+        
+        .orientation-0
+        {
+            transform: rotate(0deg);
+            -ms-transform: rotate(0deg); /* IE 9 */
+            -webkit-transform: rotate(0deg); /* Safari and Chrome */
+        }
+        .orientation-90
+        {
+            transform: rotate(90deg);
+            -ms-transform: rotate(90deg); /* IE 9 */
+            -webkit-transform: rotate(90deg); /* Safari and Chrome */
+        }
+        .orientation-180
+        {
+            transform: rotate(180deg);
+            -ms-transform: rotate(180deg); /* IE 9 */
+            -webkit-transform: rotate(180deg); /* Safari and Chrome */
+        }
+        .orientation-270
+        {
+            transform: rotate(270deg);
+            -ms-transform: rotate(270deg); /* IE 9 */
+            -webkit-transform: rotate(270deg); /* Safari and Chrome */
+        }
+        #messages
+        {
+            position: absolute;
+            width: 100%;
+            bottom: 60px;
+            text-align: center;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <video id="vid" style="position: absolute; top: 0; left: 0; height: 100%; width: 100%">
+    <source id="video-source" />
+    </video>
+    <audio id="aud">
+    <source id="audio-source" />
+    </audio>
+    <div id="container">
+        <img class="cast-pic" />
+    </div>
+    <div id="messages">
+    </div>
+</body>
+</html>
+
