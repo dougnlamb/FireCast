@@ -27,6 +27,14 @@ public class MainActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		
+		if(getIntent().hasExtra("command")) {
+			if(getIntent().getStringExtra("command").equals("stopService")) {
+				stopService(new Intent(this, FireCastService.class));
+				finish();
+				return;
+			}
+		}
 		// Bind to LocalService
 		Intent svcIntent = new Intent(this, FireCastService.class);
 

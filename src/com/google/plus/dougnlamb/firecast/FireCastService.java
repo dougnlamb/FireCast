@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import com.google.cast.ApplicationSession;
 import com.google.cast.CastContext;
@@ -14,6 +16,9 @@ import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -28,7 +33,7 @@ import android.util.Log;
 
 public class FireCastService extends Service {
 
-	private static final String PATH = "/1";
+	//private static final String PATH = "/1";
 	private static final int PORT = 5002;
 	private final IBinder mBinder = new LocalBinder();
 	private AsyncHttpServer mServer;
@@ -42,8 +47,10 @@ public class FireCastService extends Service {
 	private Date mServiceStartDate;
 
 	private String mMessages = "";
+	private ArrayList<String> mFiles;
 
 	public FireCastService() {
+		mFiles = new ArrayList<String>();
 	}
 
 	public static FireCastService getInstance() {
@@ -63,6 +70,7 @@ public class FireCastService extends Service {
 		mCastContext = new CastContext(getApplicationContext());
 		mInstance = this;
 
+		showNotification();
 	}// met
 
 	@Override
@@ -77,8 +85,10 @@ public class FireCastService extends Service {
 				mCastContext.dispose();
 			}
 		} catch (Exception ex) {
+			Log.e("",ex.getMessage(),ex);
 		}
-
+		mNotificationManager.cancel(R.string.service_started);
+		
 		if (mServer != null) {
 			mServer.stop();
 		}
@@ -106,7 +116,7 @@ public class FireCastService extends Service {
 		if (mServer == null) {
 			mServer = new AsyncHttpServer();
 
-			mServer.get(PATH, new ServerCallback());
+			mServer.get("/\\d+", new ServerCallback());
 			mServer.listen(PORT);
 
 			mMessages = "Started Server.";
@@ -132,18 +142,15 @@ public class FireCastService extends Service {
 				AsyncHttpServerResponse response) {
 
 			try {
-				if (mFilePath != null) {
-
+					int index = Integer.parseInt(request.getPath().replace("/", ""));
+					String filePath = mFiles.get(index);
 					// Only serve the file set during in sendMediaRequest().
-					File f = new File(mFilePath);
+					File f = new File(filePath);
 					
-					String mimeType = getMimeType(mFilePath);
+					String mimeType = getMimeType(filePath);
 					response.setContentType(mimeType);
 					
 					response.sendFile(f);
-				} else {
-					response.send("No File");
-				}
 			} catch (Exception ex) {
 				response.send(ex.getMessage());
 			}
@@ -151,28 +158,41 @@ public class FireCastService extends Service {
 		}
 	}
 
-	private String mFilePath;
 	private String mContentType;
 
 	public void sendMediaRequest(String filePath) throws Exception {
-		mFilePath = filePath;
+		
 
 		// File path is already http, so just send the path as the url.
-		if (mFilePath.startsWith("http://") || mFilePath.startsWith("https://")) {
-			mSession.sendMedia(getMimeType(mFilePath),
-					mFilePath);
+		if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+			mSession.sendMedia(getMimeType(filePath), filePath, 0);
 		} else {
-			String url = getLocalMediaURL();
-			mContentType = getMimeType(mFilePath);
-			int orientation = getOrientation(mFilePath);
+			this.mFiles.add(filePath);
+			String url = getLocalMediaURL(this.mFiles.size() - 1);
+			mContentType = getMimeType(filePath);
+			int orientation = getOrientation(filePath);
 
 			
 			mSession.sendMedia(mContentType, url, orientation);
 		}
 	}
 	
+	public void queueMediaRequest(String filePath) throws Exception {
+		if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+			mSession.queueMedia(getMimeType(filePath), filePath, 0);
+		} else {
+			this.mFiles.add(filePath);
+			String url = getLocalMediaURL(this.mFiles.size() - 1);
+			mContentType = getMimeType(filePath);
+			int orientation = getOrientation(filePath);
+
+			mSession.queueMedia(mContentType, url, orientation);
+		}
+		
+	}
+	
 	private String getMimeType(String filePath) {
-		String mimeType = AsyncHttpServer.getContentType(mFilePath);
+		String mimeType = AsyncHttpServer.getContentType(filePath);
 		if("text/plain".equals(mimeType) && filePath.endsWith(".mp3")) {
 			mimeType = "audio/mp3";
 		}
@@ -180,8 +200,8 @@ public class FireCastService extends Service {
 		return mimeType;
 	}
 
-	private String getLocalMediaURL() {
-		return "http://" + getIpAddr() + ":" + PORT + PATH;
+	private String getLocalMediaURL(int id) {
+		return "http://" + getIpAddr() + ":" + PORT + "/" + id;
 	}
 
 	private int getOrientation(String path) throws IOException {
@@ -233,5 +253,34 @@ public class FireCastService extends Service {
 		mSession.setDevice(device);
 		mSession.startSession(getCastContext());
 	}
+
+
+	private NotificationManager mNotificationManager;
+	
+    private void showNotification() {
+        // The PendingIntent to launch our activity if the user selects this notification
+    	Intent stopIntent = new Intent(this, MainActivity.class);
+    	stopIntent.putExtra("command", "stopService");
+    	PendingIntent pStopIntent = PendingIntent.getActivity(this, 0,
+               stopIntent, PendingIntent.FLAG_UPDATE_CURRENT );
+    	
+        PendingIntent pControlsIntent = PendingIntent.getActivity(this, 0,
+                new Intent(this, VideoControlsActivity.class), PendingIntent.FLAG_UPDATE_CURRENT );
+        
+    	Notification notification = new Notification.Builder(this)
+        .setContentTitle("Firecast")
+        .setContentText("Firecast service running").setSmallIcon(R.drawable.play)
+        .addAction(R.drawable.stop, "Stop", pStopIntent)
+        .addAction(R.drawable.play, "Video Controls", pControlsIntent)
+        .setOngoing(true)
+        .build();
+
+
+    	mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+    	
+        // Send the notification.
+        // We use a string id because it is a unique number.  We use it later to cancel.
+        mNotificationManager.notify(R.string.service_started, notification);
+    }
 
 }

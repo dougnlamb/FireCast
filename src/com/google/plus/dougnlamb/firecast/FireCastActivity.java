@@ -22,6 +22,8 @@ public class FireCastActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		Intent intent = getIntent();
 
 		setContentView(R.layout.activity_fire_cast);
 
@@ -63,7 +65,8 @@ public class FireCastActivity extends Activity {
 		FireMediaTask task = new FireMediaTask(mService, this);
 		task.execute(getIntent());
 
-		if (getIntent().getType().startsWith("video/")) {
+		String typ = getIntent().getType();
+		if (typ != null && (typ.startsWith("video/") || typ.startsWith("audio/") ) ) {
 			Intent myIntent = new Intent(this, VideoControlsActivity.class);
 			startActivity(myIntent);
 		}

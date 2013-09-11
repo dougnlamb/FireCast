@@ -9,12 +9,19 @@
     <string name="connect_button">Connect</string>
     <string name="cancel_button">Cancel</string>
     <string name="select_device">Select Device</string>
-    
     <string name="title_activity_video_controls">Video Controls</string>
-    
     <string name="play_button">Play</string>
     <string name="pause_button">Pause</string>
-    <string name="replay_button">Replay</string>
+    <string name="restart_button">Restart</string>
     <string name="forward_button">Forward</string>
+    <string name="rewind_button">Rewind</string>
+    <string name="mute_button">Mute</string>
+    <string name="voldown_button">Volume Down</string>
+    <string name="volup_button">Volume Up</string>
+    <string name="previous_button">Previous</string>
+    <string name="next_button">Next</string>
+    <string name="title_activity_drive">DriveActivity</string>
+    <string name="service_started">Service Started</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 
 </resources>

@@ -1,19 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head runat="server">
-    <title>MediaDisplay</title>
+    <title>Firecast</title>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     <script src="https://www.gstatic.com/cast/js/receiver/1.0/cast_receiver.js"> </script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/1.10.2/TweenMax.min.js"></script>
     <script type="text/javascript">
 
         $(function () {
+            var videoPlaying = false;
+            var photoDisplayTime = 5;
+
+            function MediaItem() {
+                this.title = "";
+                this.url = "";
+                this.imageURL = "";
+                this.mimeType = "";
+                this.orientation = 0;
+            }
+
+            function MediaQueue() {
+                this.currentIndex = 0;
+                this.mediaItems = [];
+            }
+
+            MediaQueue.prototype.addMediaItem = function (mediaItem) {
+                this.mediaItems.push(mediaItem);
+            }
+
+            MediaQueue.prototype.nextMediaItem = function () {
+                if (this.currentIndex >= this.mediaItems.length - 1) {
+                    this.currentIndex = 0;
+                }
+                else {
+                    this.currentIndex += 1;
+                }
+
+                if (this.currentIndex > this.mediaItems.length - 1) {
+                    return "";
+                }
+                else {
+                    return this.mediaItems[this.currentIndex];
+                }
+            }
+
+            MediaQueue.prototype.randomMediaItem = function () {
+                var idx = Math.floor(Math.random() * this.mediaItems.length);
+                return this.mediaItems[idx];
+            }
+
+            MediaQueue.prototype.previousMediaItem = function () {
+                if (this.currentIndex <= 0) {
+                    this.currentIndex = this.mediaItems.length - 1;
+                }
+                else {
+                    this.currentIndex -= 1;
+                }
+
+                if (this.currentIndex > this.mediaItems.length - 1) {
+                    return "";
+                }
+                else {
+                    return this.mediaItems[this.currentIndex];
+                }
+            }
+
+            var videos = new MediaQueue();
+            var songs = new MediaQueue();
+            var photos = new MediaQueue();
+
+            function hideMessage() {
+                $('#message').fadeOut('slow');
+            }
 
             function displayMessage(msg, timeout) {
-                $('#messages').html(msg);
+                $('#message').html(msg);
+                $('#message').fadeIn('slow');
                 if (timeout != 0) {
                     setTimeout(function () {
-                        $('#messages').html('');
+                        hideMessage();
                     }, timeout);
                 }
             }
@@ -25,6 +90,20 @@
 
             channelHandler.addChannelFactory(
 			receiver.createChannelFactory('com.google.plus.dougnlamb.firecast'));
+
+            var remoteMedia = new cast.receiver.RemoteMedia();
+
+            var elem = document.getElementById('multimedia');
+            remoteMedia.setMediaElement(elem);
+
+            remoteMedia.onEnded = function () {
+                if (videoPlaying) {
+                    displayMessage("Video End.", 4000);
+                }
+                else {
+                    displayMessage("Audio End.", 4000);
+                }
+            }
 
             receiver.start();
 
@@ -40,100 +119,388 @@
             function onMessage(event) {
                 try {
                     var cmd = event.message.command;
+                    var mimetype = event.message.mimetype;
 
                     if (cmd === "newmedia") {
-                        var url = event.message.url + '?' + Date.now();
-                        var mimetype = event.message.mimetype;
-                        var $castPic = $('.cast-pic');
-                        var $video = $('#vid');
-
-                        if (mimetype == "video/mp4" || mimetype == "video/3gp") {
-                            $castPic.hide();
-                            document.getElementById("aud").pause();
-                            $('#audio-source').attr('src', '');
-                            $video.show();
-                            $('#video-source').attr('src', url);
-                            $('#video-source').attr('type', mimetype);
-                            document.getElementById('vid').load();
-                            document.getElementById('vid').play();
-                            displayMessage('Playing new video', 2000);
+                        var mediaItem = event.message.mediaItem;
+                        if (!mediaItem) {
+                            mediaItem = new MediaItem();
+                            mediaItem.url = event.message.url;
+                            mediaItem.mimeType = event.message.mimetype;
+                            mediaItem.orientation = event.message.orientation;
                         }
-                        else if (mimetype == "audio/mp3") {
-                            document.getElementById("vid").pause();
-                            $('#video-source').attr('src', '');
-                            $('#audio-source').attr('src', url);
-                            document.getElementById('aud').load();
-                            document.getElementById('aud').play();
-                            displayMessage('Playing new song', 2000);
+                        var mimetype = mediaItem.mimeType;
+                        var $castPic = $('.photo');
+
+                        if (mimetype == "video/mp4") {
+                            $castPic.hide();
+                            videos.addMediaItem(mediaItem);
+                            startVideo(mediaItem.url, mediaItem.mimeType);
+                        }
+                        else if (mimetype == "audio/mp3" || mimetype == "audio/aac" || mimetype == "audio/m4a") {
+                            $castPic.show();
+                            songs.addMediaItem(mediaItem);
+                            startAudio(mediaItem.url, mediaItem.mimeType);
                         }
                         else {
-                            document.getElementById("vid").pause();
-                            $video.hide();
-
-                            var $newImage = $('<img>');
-                            displayMessage('Loading image...', 0);
-
-                            $newImage.on('load', function () {
-
-                                var orientation = event.message.orientation;
-
-                                //                                $castPic.fadeOut('slow', function () {
-                                var showNextImage = function () {
-                                    $('#container').removeClass('orientation-0');
-                                    $('#container').removeClass('orientation-90');
-                                    $('#container').removeClass('orientation-180');
-                                    $('#container').removeClass('orientation-270');
-                                    $('#container').addClass('orientation-' + orientation);
-
-                                    displayMessage('', 0);
-
-                                    document.getElementById('container').innerHTML = '';
-
-                                    $newImage.css('opacity', 0);
-                                    $('#container').append($newImage);
-
-                                    $newImage.addClass('cast-pic');
-                                    var imgClass = "";
-                                    if (orientation == 90 || orientation == 270) {
-                                        imgClass = (this.height / this.width > 1) ? 'wide' : 'tall';
-                                    }
-                                    else {
-                                        imgClass = (this.width / this.height > 1) ? 'wide' : 'tall';
-                                    }
-                                    $newImage.addClass(imgClass);
-                                    TweenLite.to($newImage, 2, { autoAlpha: 1 });
-                                    //    $newImage.fadeIn('slow');
-                                }
-
-                                TweenLite.to($castPic, 2, { autoAlpha: 0, onComplete: showNextImage });
-                                //                                });
-                            });
-
-                            $newImage.attr('src', url);
+                            if (videoPlaying) {
+                                clearVideoObject();
+                            }
+                            photos.addMediaItem(mediaItem);
+                            displayPhoto(mediaItem.url, mediaItem.mimeType, mediaItem.orientation);
+                        }
+                    }
+                    else if (cmd === "queue-media") {
+                        if (event.message.mediaItem != null) {
+                            queueMediaItem(event.message.mediaItem);
+                        }
+                        else if (event.message.mediaItems != null) {
+                            for (var idx = 0; idx < event.message.mediaItems.length - 1; idx++) {
+                                queueMediaItem(event.message.mediaItems[idx]);
+                            }
                         }
                     }
                     else if (cmd === "play") {
-                        document.getElementById("vid").play();
-                        displayMessage('Playing', 2000);
+                        play();
                     }
                     else if (cmd === "pause") {
-                        document.getElementById("vid").pause();
-                        displayMessage('Paused', 0);
+                        pause();
+                    }
+                    else if (cmd === "restart") {
+                        restart();
+                    }
+                    else if (cmd === "position") {
+                        position(event.message.currentTime);
                     }
                     else if (cmd === "seek") {
-                        if (event.message.time < 0) {
-                            document.getElementById("vid").currentTime = 0;
-                            displayMessage('Restarting', 2000);
-                        }
-                        else {
-                            document.getElementById("vid").currentTime += event.message.time;
-                            displayMessage('Forward ' + (event.message.time) + ' seconds.', 2000);
-                        }
+                        seek(event.message.seekTime);
+                    }
+                    else if (cmd === "volume-down") {
+                        volumeDown();
+                    }
+                    else if (cmd === "volume-up") {
+                        volumeUp();
+                    }
+                    else if (cmd === "mute") {
+                        mute();
+                    }
+                    else if (cmd === "next-photo") {
+                        nextPhoto();
+                    }
+                    else if (cmd === "previous-photo") {
+                        previousPhoto();
+                    }
+                    else if (cmd === "next-song") {
+                        nextSong();
+                    }
+                    else if (cmd === "previous-song") {
+                        previousSong();
+                    }
+                    else if (cmd === "next-video") {
+                        nextVideo();
+                    }
+                    else if (cmd === "set-photo-display-time") {
+                        photoDisplayTime = event.message.photoDisplayTime;
+                    }
+                    else if (cmd === "previous-video") {
+                        previousVideo();
+                    }
+                    else if (cmd === "start-slideshow") {
+                        startSlideshow();
+                    }
+                    else if (cmd === "pause-slideshow") {
+                        pauseSlideshow();
+                    }
+                    else if (cmd === "get-status") {
+                    }
+                    else if (cmd === "display-status") {
                     }
                 }
                 catch (ex) {
+                    console.error(ex.message);
                 }
             }
+
+            function queueMediaItems(mediaItems) {
+                for (var idx = 0; idx < mediaItems.length - 1; idx++) {
+                    queueMediaItem(mediaItems[idx]);
+                }
+            }
+
+            function queueMediaItem(mediaItem) {
+                if (mediaItem.mimeType.indexOf("image") === 0) {
+                    photos.addMediaItem(mediaItem);
+                    //                    var $photo = $('.photo');
+                    //                    if ($photo.attr('src') === "" || $photo.attr('src') == null) {
+                    //                        displayPhoto(mediaItem.url, mediaItem.mimeType, mediaItem.orientation);
+                    //                    }
+                    if (slideshowRunning && !photosStarted) {
+                        randomPhoto();
+                        photosStarted = true;
+                    }
+                }
+                else if (mediaItem.mimeType.indexOf("audio") === 0) {
+                    songs.addMediaItem(mediaItem);
+
+                    if (slideshowRunning && !musicStarted) {
+                        randomSong();
+                        musicStarted = true;
+                    }
+                }
+                else if (mediaItem.mimeType.indexOf("video") === 0) {
+                    videos.addMediaItem(mediaItem);
+                }
+            }
+
+            function nextPhoto() {
+                var mediaItem = photos.nextMediaItem();
+                displayPhoto(mediaItem.url, mediaItem.mimeType, mediaItem.orientation);
+            }
+
+            function previousPhoto() {
+                var mediaItem = photos.previousMediaItem();
+                displayPhoto(mediaItem.url, mediaItem.mimeType, mediaItem.orientation);
+            }
+
+            var intervalID = -1;
+            var slideshowRunning = false;
+            var photosStarted = false;
+            var musicStarted = false;
+            function startSlideshow() {
+                if (!slideshowRunning) {
+                    slideshowRunning = true;
+                    gotoNextPhoto();
+                }
+            }
+
+            function prepareNextSlide() {
+                if (slideshowRunning) {
+                    setTimeout(gotoNextPhoto, photoDisplayTime * 1000);
+                }
+            }
+
+            function gotoNextPhoto() {
+                if (slideshowRunning) {
+                    randomPhoto();
+                    //                    nextPhoto();
+                }
+            }
+
+            function randomPhoto() {
+                var mediaItem = photos.randomMediaItem();
+                displayPhoto(mediaItem.url, mediaItem.mimeType, mediaItem.orientation);
+            }
+
+            function pauseSlideshow() {
+                slideshowRunning = false;
+                try {
+                    clearInterval(intervalID);
+                }
+                catch (err) { }
+            }
+
+            function randomSong() {
+                var mediaItem = songs.randomMediaItem();
+                startAudio(mediaItem.url, mediaItem.mimeType);
+            }
+
+            function nextSong() {
+                var mediaItem = songs.nextMediaItem();
+                startAudio(mediaItem.url, mediaItem.mimeType);
+            }
+
+            function previousSong() {
+                var mediaItem = songs.previousMediaItem();
+                startAudio(mediaItem.url, mediaItem.mimeType);
+            }
+
+            function nextVideo() {
+                var mediaItem = videos.nextMediaItem();
+                startVideo(mediaItem.url, mediaItem.mimeType);
+            }
+
+            function previousVideo() {
+                var mediaItem = videos.previousMediaItem();
+                startVideo(mediaItem.url, mediaItem.mimeType);
+            }
+
+            function imageLoaded() {
+                var $onDiv = $('.on');
+                var $offDiv = $('.off');
+
+                $onDiv.removeClass('on');
+                $onDiv.addClass('off');
+
+                $offDiv.removeClass('off');
+                $offDiv.addClass('on');
+
+                prepareNextSlide();
+            }
+            function displayPhoto(url, mimetype, orientation) {
+                var $newImage = $('div.off > div.container > div.inner > img');
+                var $orientationContainer = $('div.off > div.container > div.inner');
+
+                $orientationContainer.removeClass('orientation-0');
+                $orientationContainer.removeClass('orientation-90');
+                $orientationContainer.removeClass('orientation-180');
+                $orientationContainer.removeClass('orientation-270');
+                $orientationContainer.addClass('orientation-' + orientation);
+
+                loadPhoto(url);
+            }
+
+            function startVideo(url, mimetype) {
+                videoPlaying = true;
+                clearAudioObject();
+
+                $('#multimedia').show();
+
+                $('#multimedia-source').attr('src', url);
+                $('#multimedia-source').attr('type', mimetype);
+
+                document.getElementById('multimedia').load();
+                document.getElementById('multimedia').play();
+                displayMessage('Loading video', 0);
+            }
+
+            function startAudio(url, mimetype) {
+                if (url === "") {
+                    return;
+                }
+                videoPlaying = false;
+                clearVideoObject();
+                $('#multimedia').hide();
+
+                $('#multimedia-source').attr('src', url);
+                $('#multimedia-source').attr('type', mimetype);
+
+                document.getElementById('multimedia').load();
+                document.getElementById('multimedia').play();
+                displayMessage('Loading music', 0);
+            }
+
+            function clearAudioObject() {
+                var audioObject = document.getElementById('multimedia');
+                if (audioObject != null) {
+                    audioObject.pause();
+                    audioObject.src = null;
+                }
+            }
+            function clearVideoObject() {
+                var videoObject = document.getElementById('multimedia');
+                if (videoObject != null) {
+                    videoObject.pause();
+                    videoObject.src = null;
+                }
+            }
+
+            function play() {
+                getMediaObject().play();
+                displayMessage('Playing', 2000);
+            }
+            function pause() {
+                getMediaObject().pause();
+                displayMessage('Paused', 0);
+            }
+            function seek(seekTime) {
+                getMediaObject().currentTime += seekTime;
+                var direction = "Forward ";
+                if (seekTime < 0) {
+                    direction = "Rewind ";
+                }
+                displayTime(getMediaObject());
+            }
+            function restart() {
+                getMediaObject().currentTime = 0;
+                getMediaObject().play();
+                displayMessage('Restarting', 2000);
+            }
+            function volume(newVolume) {
+                if (volume >= 0 && volume <= 1) {
+                    //                    getMediaObject().volume = newVolume;
+                    cast.receiver.platform.setVolume(newVolume);
+                }
+            }
+
+            function volumeUp() {
+                //                var mediaObject = getMediaObject();
+                var newVolume = cast.receiver.platform.getVolume() + .05;
+                cast.receiver.platform.setVolume((newVolume <= 1 ? newVolume : 1));
+            }
+
+            function volumeDown() {
+                var newVolume = cast.receiver.platform.getVolume() - .05;
+                cast.receiver.platform.setVolume((newVolume >= 0 ? newVolume : 0));
+            }
+
+            function mute() {
+                if (cast.receiver.platform.getMuted()) {
+                    cast.receiver.platform.setMuted(false);
+                }
+                else {
+                    cast.receiver.platform.setMuted(true);
+                }
+            }
+
+
+            function displayTime(mediaObject) {
+                displayMessage('Current time: ' + mediaObject.currentTime, 2000);
+            }
+            function getMediaObject() {
+                var mediaObject = document.getElementById('multimedia');
+                if (mediaObject == null) {
+                    mediaObject = document.getElementById('multimedia');
+                }
+                return mediaObject;
+            }
+
+            document.getElementById('multimedia').addEventListener("loadedmetadata", function () {
+                displayMessage(remoteMedia.getTitle() + " loaded.", 2000);
+            });
+
+            document.getElementById('multimedia').addEventListener('ended', myHandler, false);
+            function myHandler(e) {
+                if (!e) { e = window.event; }
+                randomSong();
+            }
+
+            function loadPhoto(url) {
+                var $photo = $('<img class="photo">');
+                $photo.on('load', function () {
+                    var $newImage = $(this);
+
+                    var imgClass = "";
+                    var $orientationContainer = $('div.off > div.container > div.inner');
+
+                    if ($orientationContainer.hasClass('orientation-90') || $orientationContainer.hasClass('orientation-270')) {
+                        imgClass = (this.height / this.width > 1) ? 'wide' : 'tall';
+                        if (this.width > document.height) {
+                            this.width = document.height;
+                        }
+                        else if (this.height > document.width) {
+                            this.height = document.width;
+                        }
+                    }
+                    else {
+                        imgClass = (this.width / this.height > 1) ? 'wide' : 'tall';
+                        if (this.width > document.width) {
+                            this.width = document.width;
+                        }
+                        else if (this.height > document.height) {
+                            this.height = document.height;
+                        }
+                    }
+
+                    $newImage.addClass(imgClass);
+                    $orientationContainer.empty();
+                    $orientationContainer.append($newImage);
+
+                    imageLoaded();
+                });
+
+                $photo.attr('src', url);
+            }
+
         });
 
     </script>
@@ -143,25 +510,40 @@
             background-color: #222222;
             text-align: center;
         }
-        #container
+        #photo-container
         {
-            width: 80%;
-            height: 80%;
+            position: absolute;
+            width: 100%;
+            height: 100%;
             background: transparent;
             margin: auto;
+            z-index: 10;
         }
-        #container img.wide
+        #photo-container img.wide
         {
             max-width: 100%;
             max-height: 100%;
             height: auto;
         }
-        #container img.tall
+        #photo-container img.tall
         {
             max-height: 100%;
             max-width: 100%;
             width: auto;
         }
+        
+        #music-info
+        {
+            height: 50%;
+            width: 50%;
+            background-color: Aqua;
+            color: Gray;
+            margin: auto;
+            -webkit-border-radius: 5px;
+            -moz-border-radius: 5px;
+            border-radius: 5px;
+        }
+        
         
         .orientation-0
         {
@@ -187,27 +569,113 @@
             -ms-transform: rotate(270deg); /* IE 9 */
             -webkit-transform: rotate(270deg); /* Safari and Chrome */
         }
-        #messages
+        #message-container
         {
             position: absolute;
-            width: 100%;
-            bottom: 60px;
-            text-align: center;
+            left: 50%;
+            bottom: 50px;
+        }
+        #message
+        {
+            position: relative;
+            left: -50%;
             z-index: 100;
+            -webkit-border-radius: 5px;
+            -moz-border-radius: 5px;
+            border-radius: 5px;
+            background-color: #c0c0c0;
+            border: solid 1px #444444;
+            color: #444444;
+            padding: 5px;
+            font-size: 1.5em;
+        }
+        video
+        {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+        }
+        
+        div.outer
+        {
+            display: table;
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            z-index: 10;
+        }
+        div.container
+        {
+            display: table-cell;
+            vertical-align: middle;
+            max-height: 100%;
+        }
+        div.inner
+        {
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+            max-height: 100%;
+        }
+        div.on
+        {
+            opacity: 1;
+            transition: opacity .3s ease-out;
+            -moz-transition: opacity .3s ease-out;
+            -webkit-transition: opacity .3s ease-out;
+            -o-transition: opacity .3s ease-out;
+        }
+        div.off
+        {
+            opacity: 0;
+            transition: opacity .3s ease-out;
+            -moz-transition: opacity .3s ease-out;
+            -webkit-transition: opacity .3s ease-out;
+            -o-transition: opacity .3s ease-out;
+        }
+        .orientation-90
+        {
+            transform: rotate(90deg);
+            -ms-transform: rotate(90deg); /* IE 9 */
+            -webkit-transform: rotate(90deg); /* Safari and Chrome */
+        }
+        img.wide
+        {
+            max-width: 100%;
+            max-height: 100%;
+            height: auto;
+        }
+        img.tall
+        {
+            max-height: 100%;
+            max-width: 100%;
+            width: auto;
         }
     </style>
 </head>
 <body>
-    <video id="vid" style="position: absolute; top: 0; left: 0; height: 100%; width: 100%">
-    <source id="video-source" />
-    </video>
-    <audio id="aud">
-    <source id="audio-source" />
-    </audio>
-    <div id="container">
-        <img class="cast-pic" />
+    <div id="media-container">
+        <video id='multimedia'><source id='multimedia-source'></source></video>
     </div>
-    <div id="messages">
+    <div class="outer on">
+        <div class="container">
+            <div class="inner">
+                <img class="photo" />
+            </div>
+        </div>
+    </div>
+    <div class="outer off">
+        <div class="container">
+            <div class="inner">
+                <img class="photo" />
+            </div>
+        </div>
+    </div>
+    <div id="message-container">
+        <div id="message" style="display: none;">
+        </div>
     </div>
 </body>
 </html>

@@ -36,13 +36,10 @@ public class FireCastSession {
 	}
 
 	private boolean mIsSessionStarting;
+	private boolean mKillingSession = false;
 
 	public boolean isSessionStarting() {
 		return mIsSessionStarting;
-	}
-
-	public void sendMedia(String mimeType, String url) throws Exception {
-		sendMedia(mimeType, url, 0);
 	}
 
 	private String mMimeType;
@@ -64,11 +61,12 @@ public class FireCastSession {
 
 	public void startSession(CastContext castContext) {
 
+		mKillingSession = false;
 		mSession = new ApplicationSession(castContext, getDevice());
 		mSession.setListener(new SessionListener());
 
 		try {
-			mSession.startSession("App Id");
+			mSession.startSession("App ID");
 		} catch (IOException e) {
 			System.err.println(e);
 		}
@@ -78,6 +76,17 @@ public class FireCastSession {
 	private class SessionListener implements ApplicationSession.Listener {
 		@Override
 		public void onSessionStarted(ApplicationMetadata appMetadata) {
+
+			if (mKillingSession) {
+				mIsSessionStarting = false;
+				try {
+					mSession.endSession();
+					mKillingSession = false;
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 
 			ApplicationChannel channel = mSession.getChannel();
 			if (channel == null) {
@@ -96,8 +105,20 @@ public class FireCastSession {
 
 		@Override
 		public void onSessionStartFailed(SessionError error) {
-			mIsSessionStarting = false;
-			mIsSessionReady = false;
+			try {
+				if (mIsSessionStarting) {
+					mIsSessionStarting = false;
+					mKillingSession = true;
+					mSession.startSession();
+				}
+				mIsSessionStarting = false;
+				mIsSessionReady = false;
+
+				mSession.endSession();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		@Override
@@ -128,6 +149,11 @@ public class FireCastSession {
 		mMimeType = mimeType;
 		mUrl = url;
 		mOrientation = orientation;
+	}
+
+	public void queueMedia(String mimeType, String url, int orientation)
+			throws Exception {
+		mMessageStream.queueMedia(mimeType, url, orientation);
 	}
 
 }

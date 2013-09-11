@@ -1,56 +1,99 @@
 package com.google.plus.dougnlamb.firecast;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.google.cast.MessageStream;
 
-public class FireCastMessageStream 
-	extends MessageStream {
+public class FireCastMessageStream extends MessageStream {
 
-		protected FireCastMessageStream(String namespace)
-				throws IllegalArgumentException {
-			super(namespace);
-		}
+	protected FireCastMessageStream(String namespace)
+			throws IllegalArgumentException {
+		super(namespace);
+	}
 
-		@Override
-		public void onMessageReceived(JSONObject arg0) {
-			// TODO Handle messages from Receiver (playing, paused, currentTime, etc.)
+	@Override
+	public void onMessageReceived(JSONObject arg0) {
+		// TODO Handle messages from Receiver (playing, paused, currentTime,
+		// etc.)
 
-		}
+	}
 
-		public void sendMedia(String mimetype, String url, int orientation) throws Exception {
+	public void sendMedia(String mimetype, String url, int orientation)
+			throws Exception {
+		sendMessage(getPayload("newmedia", mimetype, url, orientation));
+	}
 
-			JSONObject payload = new JSONObject();
-			payload.put("command", "newmedia");
-			payload.put("mimetype", mimetype);
-			payload.put("url", url);
-			payload.put("orientation", orientation);
+	public void queueMedia(String mimetype, String url, int orientation)
+			throws Exception {
+		sendMessage(getPayload("queue-media", mimetype, url, orientation));
+	}
 
-			sendMessage(payload);
-		}
+	private JSONObject getPayload(String command, String mimetype, String url,
+			int orientation) throws JSONException {
+		JSONObject payload = new JSONObject();
+		payload.put("command", command);
 
-		public void pause() throws Exception {
-			sendCommand("pause");
-		}
-		
-		public void play() throws Exception {
-			sendCommand("play");
-		}
-		
-		public void seek(int seconds) throws Exception {
-			JSONObject payload = new JSONObject();
-			payload.put("command", "seek");
-			payload.put("time", seconds);
+		MediaItem mi = new MediaItem(url, mimetype, orientation);
+		payload.put("mediaItem", new JSONObject(mi.getMap()));
 
-			sendMessage(payload);
-			
-		}
-		
-		private void sendCommand(String cmdName) throws Exception {
+		return payload;
+	}
 
-			JSONObject payload = new JSONObject();
-			payload.put("command", cmdName);
+	public void pause() throws Exception {
+		sendCommand("pause");
+	}
 
-			sendMessage(payload);
-		}
+	public void play() throws Exception {
+		sendCommand("play");
+	}
+
+	public void nextPhoto() throws Exception {
+		sendCommand("next-photo");
+	}
+
+	public void previousPhoto() throws Exception {
+		sendCommand("previous-photo");
+	}
+	
+	public void startSlideshow() throws Exception {
+		sendCommand("start-slideshow");
+	}
+
+	public void seek(int seconds) throws Exception {
+		JSONObject payload = new JSONObject();
+		payload.put("command", "seek");
+		payload.put("seekTime", seconds);
+
+		sendMessage(payload);
+
+	}
+
+	private void sendCommand(String cmdName) throws Exception {
+
+		JSONObject payload = new JSONObject();
+		payload.put("command", cmdName);
+
+		sendMessage(payload);
+	}
+
+	public void restart() throws Exception {
+		sendCommand("restart");
+	}
+
+	public void volume_down() throws Exception {
+		sendCommand("volume-down");
+
+	}
+
+	public void volume_up() throws Exception {
+		sendCommand("volume-up");
+
+	}
+
+	public void mute() throws Exception {
+		sendCommand("mute");
+
+	}
+
 }

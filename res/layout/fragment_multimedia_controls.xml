@@ -3,13 +3,6 @@
     android:layout_height="fill_parent"
     android:gravity="center_vertical" >
 
-    <fragment android:name="com.google.plus.dougnlamb.firecast.MultimediaControlsFragment"
-        android:id="@+id/mutlimedia_controls"
-            android:layout_weight="1"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-        />
-    <!-- 
     <RelativeLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="wrap_content"
@@ -17,7 +10,8 @@
         android:background="@drawable/background_border"
         android:padding="16dp" >
 
-      
+        <!-- Put form controls here -->
+
         <TextView
             android:id="@+id/name"
             android:layout_width="fill_parent"
@@ -31,7 +25,6 @@
             android:layout_below="@id/name"
             android:layout_centerHorizontal="true"
             android:contentDescription="@string/play_button"
-            android:onClick="play"
             android:src="@drawable/play" >
         </ImageButton>
 
@@ -42,7 +35,6 @@
             android:layout_alignParentLeft="true"
             android:layout_below="@id/button_play"
             android:contentDescription="@string/rewind_button"
-            android:onClick="rewind"
             android:src="@drawable/rewind" >
         </ImageButton>
 
@@ -53,7 +45,6 @@
             android:layout_below="@id/button_play"
             android:layout_centerHorizontal="true"
             android:contentDescription="@string/pause_button"
-            android:onClick="pause"
             android:src="@drawable/pause" >
         </ImageButton>
 
@@ -64,21 +55,19 @@
             android:layout_alignParentRight="true"
             android:layout_below="@id/button_play"
             android:contentDescription="@string/forward_button"
-            android:onClick="forward"
             android:src="@drawable/fastforward" >
         </ImageButton>
-        
+
         <ImageButton
             android:id="@+id/button_restart"
             android:layout_width="96dp"
             android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
             android:layout_below="@id/button_pause"
+            android:layout_centerHorizontal="true"
             android:contentDescription="@string/restart_button"
-            android:onClick="restart"
             android:src="@drawable/restart" >
         </ImageButton>
-        
+
         <ImageButton
             android:id="@+id/button_mute"
             android:layout_width="64dp"
@@ -86,7 +75,6 @@
             android:layout_alignParentLeft="true"
             android:layout_below="@id/button_restart"
             android:contentDescription="@string/mute_button"
-            android:onClick="mute"
             android:src="@drawable/mute" >
         </ImageButton>
 
@@ -97,7 +85,6 @@
             android:layout_below="@id/button_restart"
             android:layout_centerHorizontal="true"
             android:contentDescription="@string/voldown_button"
-            android:onClick="volume_down"
             android:src="@drawable/volume_down" >
         </ImageButton>
 
@@ -108,18 +95,16 @@
             android:layout_alignParentRight="true"
             android:layout_below="@id/button_restart"
             android:contentDescription="@string/volup_button"
-            android:onClick="volume_up"
             android:src="@drawable/volume_up" >
         </ImageButton>
-                
-                <ImageButton
+
+        <ImageButton
             android:id="@+id/button_previous"
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:layout_alignParentLeft="true"
             android:layout_below="@id/button_mute"
             android:contentDescription="@string/previous_button"
-            android:onClick="previousPhoto"
             android:src="@drawable/rewind" >
         </ImageButton>
 
@@ -130,9 +115,8 @@
             android:layout_alignParentRight="true"
             android:layout_below="@id/button_mute"
             android:contentDescription="@string/next_button"
-            android:onClick="nextPhoto"
             android:src="@drawable/fastforward" >
         </ImageButton>
     </RelativeLayout>
--->
+
 </LinearLayout>
