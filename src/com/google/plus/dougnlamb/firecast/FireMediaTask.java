@@ -60,7 +60,7 @@ public class FireMediaTask extends AsyncTask<Intent, String, String> {
 					|| intent.getType().indexOf("audio/") != -1) {
 
 				Bundle extras = intent.getExtras();
-				if (extras.containsKey(Intent.EXTRA_STREAM)) {
+				if (extras != null && extras.containsKey(Intent.EXTRA_STREAM)) {
 					Uri uri = (Uri) extras.getParcelable(Intent.EXTRA_STREAM);
 					filePath = getFilePath(uri);
 				} else {

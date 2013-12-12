@@ -66,7 +66,8 @@ public class FireCastSession {
 		mSession.setListener(new SessionListener());
 
 		try {
-			mSession.startSession("App ID");
+			mSession.startSession(castContext.getApplicationContext()
+					.getString(R.string.app_id));
 		} catch (IOException e) {
 			System.err.println(e);
 		}

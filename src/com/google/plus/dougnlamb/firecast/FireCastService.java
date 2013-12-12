@@ -16,6 +16,8 @@ import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
+import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -28,12 +30,13 @@ import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
 public class FireCastService extends Service {
 
-	//private static final String PATH = "/1";
+	// private static final String PATH = "/1";
 	private static final int PORT = 5002;
 	private final IBinder mBinder = new LocalBinder();
 	private AsyncHttpServer mServer;
@@ -85,10 +88,10 @@ public class FireCastService extends Service {
 				mCastContext.dispose();
 			}
 		} catch (Exception ex) {
-			Log.e("",ex.getMessage(),ex);
+			Log.e("", ex.getMessage(), ex);
 		}
 		mNotificationManager.cancel(R.string.service_started);
-		
+
 		if (mServer != null) {
 			mServer.stop();
 		}
@@ -142,15 +145,16 @@ public class FireCastService extends Service {
 				AsyncHttpServerResponse response) {
 
 			try {
-					int index = Integer.parseInt(request.getPath().replace("/", ""));
-					String filePath = mFiles.get(index);
-					// Only serve the file set during in sendMediaRequest().
-					File f = new File(filePath);
-					
-					String mimeType = getMimeType(filePath);
-					response.setContentType(mimeType);
-					
-					response.sendFile(f);
+				int index = Integer
+						.parseInt(request.getPath().replace("/", ""));
+				String filePath = mFiles.get(index);
+				// Only serve the file set during in sendMediaRequest().
+				File f = new File(filePath);
+
+				String mimeType = getMimeType(filePath);
+				response.setContentType(mimeType);
+
+				response.sendFile(f);
 			} catch (Exception ex) {
 				response.send(ex.getMessage());
 			}
@@ -161,7 +165,6 @@ public class FireCastService extends Service {
 	private String mContentType;
 
 	public void sendMediaRequest(String filePath) throws Exception {
-		
 
 		// File path is already http, so just send the path as the url.
 		if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
@@ -172,11 +175,10 @@ public class FireCastService extends Service {
 			mContentType = getMimeType(filePath);
 			int orientation = getOrientation(filePath);
 
-			
 			mSession.sendMedia(mContentType, url, orientation);
 		}
 	}
-	
+
 	public void queueMediaRequest(String filePath) throws Exception {
 		if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
 			mSession.queueMedia(getMimeType(filePath), filePath, 0);
@@ -188,15 +190,19 @@ public class FireCastService extends Service {
 
 			mSession.queueMedia(mContentType, url, orientation);
 		}
-		
+
 	}
-	
+
 	private String getMimeType(String filePath) {
 		String mimeType = AsyncHttpServer.getContentType(filePath);
-		if("text/plain".equals(mimeType) && filePath.endsWith(".mp3")) {
-			mimeType = "audio/mp3";
+		if ("text/plain".equals(mimeType)) {
+			if (filePath.endsWith(".mp3")) {
+				mimeType = "audio/mp3";
+			} else if (filePath.contains(".mp4?")) {
+				mimeType = "video/mp4";
+			}
 		}
-		
+
 		return mimeType;
 	}
 
@@ -254,33 +260,36 @@ public class FireCastService extends Service {
 		mSession.startSession(getCastContext());
 	}
 
-
 	private NotificationManager mNotificationManager;
-	
-    private void showNotification() {
-        // The PendingIntent to launch our activity if the user selects this notification
-    	Intent stopIntent = new Intent(this, MainActivity.class);
-    	stopIntent.putExtra("command", "stopService");
-    	PendingIntent pStopIntent = PendingIntent.getActivity(this, 0,
-               stopIntent, PendingIntent.FLAG_UPDATE_CURRENT );
-    	
-        PendingIntent pControlsIntent = PendingIntent.getActivity(this, 0,
-                new Intent(this, VideoControlsActivity.class), PendingIntent.FLAG_UPDATE_CURRENT );
-        
-    	Notification notification = new Notification.Builder(this)
-        .setContentTitle("Firecast")
-        .setContentText("Firecast service running").setSmallIcon(R.drawable.play)
-        .addAction(R.drawable.stop, "Stop", pStopIntent)
-        .addAction(R.drawable.play, "Video Controls", pControlsIntent)
-        .setOngoing(true)
-        .build();
 
+	@TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+	@SuppressLint("NewApi")
+	private void showNotification() {
+		// The PendingIntent to launch our activity if the user selects this
+		// notification
+		Intent stopIntent = new Intent(this, MainActivity.class);
+		stopIntent.putExtra("command", "stopService");
+		PendingIntent pStopIntent = PendingIntent.getActivity(this, 0,
+				stopIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-    	mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-    	
-        // Send the notification.
-        // We use a string id because it is a unique number.  We use it later to cancel.
-        mNotificationManager.notify(R.string.service_started, notification);
-    }
+		PendingIntent pControlsIntent = PendingIntent.getActivity(this, 0,
+				new Intent(this, SlideshowControlsActivity.class),
+				PendingIntent.FLAG_UPDATE_CURRENT);
+
+		Notification notification = new Notification.Builder(this)
+				.setContentTitle("Firecast")
+				.setContentText("Firecast service running")
+				.setSmallIcon(R.drawable.play)
+				.addAction(R.drawable.stop, "Stop", pStopIntent)
+				.addAction(R.drawable.play, "Video Controls", pControlsIntent)
+				.setOngoing(true).build();
+
+		mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+
+		// Send the notification.
+		// We use a string id because it is a unique number. We use it later to
+		// cancel.
+		mNotificationManager.notify(R.string.service_started, notification);
+	}
 
 }

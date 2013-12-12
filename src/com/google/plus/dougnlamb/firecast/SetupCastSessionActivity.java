@@ -1,33 +1,33 @@
 package com.google.plus.dougnlamb.firecast;
 
-import com.google.cast.CastDevice;
-import com.google.cast.CastDeviceAdapter;
-import com.google.cast.DeviceManager;
-import com.google.plus.dougnlamb.firecast.R;
-import com.google.plus.dougnlamb.firecast.FireCastService.LocalBinder;
-
-import android.os.Bundle;
-import android.os.IBinder;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.view.LayoutInflater;
+import android.os.Bundle;
+import android.os.IBinder;
+import android.support.v4.app.FragmentActivity;
+import android.support.v7.app.MediaRouteButton;
+import android.support.v7.media.MediaRouteSelector;
+import android.support.v7.media.MediaRouter;
+import android.support.v7.media.MediaRouter.RouteInfo;
+import android.util.Log;
 import android.view.Menu;
-import android.view.View;
-import android.widget.Button;
-import android.widget.Spinner;
-import android.widget.TextView;
+import android.widget.Toast;
 
-public class SetupCastSessionActivity extends Activity {
+import com.google.cast.CastDevice;
+import com.google.cast.MediaRouteAdapter;
+import com.google.cast.MediaRouteHelper;
+import com.google.cast.MediaRouteStateChangeListener;
+import com.google.plus.dougnlamb.firecast.FireCastService.LocalBinder;
 
-	private DeviceManager mDeviceManager;
-	private CastDeviceAdapter mDeviceAdapter;
+public class SetupCastSessionActivity extends FragmentActivity implements
+		MediaRouteAdapter {
 
-	private AlertDialog mConnectionDialog;
+	private static final String TAG = SetupCastSessionActivity.class
+			.getSimpleName();
+
+	// private AlertDialog mConnectionDialog;
 
 	private FireCastService mService;
 
@@ -49,65 +49,10 @@ public class SetupCastSessionActivity extends Activity {
 
 		setContentView(R.layout.activity_setup_cast_session);
 
-		mDeviceAdapter = new CastDeviceAdapter(this);
-
 		Intent svcIntent = new Intent(this, FireCastService.class);
 		startService(svcIntent);
 		bindService(svcIntent, conn, Context.BIND_AUTO_CREATE);
 
-		// ((TextView) this.findViewById(R.id.setup_status))
-		// .setText("Waiting for service");
-
-		buildDialog();
-
-	}
-
-	private void buildDialog() {
-		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
-		// Get the layout inflater
-		LayoutInflater inflater = this.getLayoutInflater();
-
-		// Inflate and set the layout for the dialog
-		// Pass null as the parent view because its going in the dialog layout
-		final View v = inflater.inflate(R.layout.dialog_setup_cast_session,
-				null);
-		Spinner spinner = (Spinner) v.findViewById(R.id.spinner_device);
-		spinner.setAdapter(mDeviceAdapter);
-
-		builder.setView(v)
-				.setPositiveButton(R.string.connect_button,
-						new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int id) {
-								connect(v);
-							}
-						})
-				.setNegativeButton(R.string.cancel_button,
-						new DialogInterface.OnClickListener() {
-							public void onClick(DialogInterface dialog, int id) {
-								disconnect();
-							}
-						}).setTitle("Chromecast Devices")
-				.setMessage("Scanning...");
-
-		mDeviceAdapter
-				.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-		mConnectionDialog = builder.create();
-
-		mConnectionDialog
-				.setOnCancelListener(new DialogInterface.OnCancelListener() {
-					@Override
-					public void onCancel(DialogInterface dialog) {
-						disconnect();
-					}
-				});
-		
-	
-		mConnectionDialog.show();
-
-		checkOKEnabled();
 	}
 
 	protected void serviceDisconnected() {
@@ -130,17 +75,18 @@ public class SetupCastSessionActivity extends Activity {
 	}
 
 	@Override
+	protected void onStop() {
+		if (mMediaRouter != null && mMediaRouterCallback != null) {
+			mMediaRouter.removeCallback(mMediaRouterCallback);
+		}
+		super.onStop();
+	}
+
+	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.setup_cast_session, menu);
 		return true;
-	}
-
-	private void connect(View v) {
-		mDeviceManager.stopScan();
-		CastDevice device = (CastDevice) ((Spinner) v
-				.findViewById(R.id.spinner_device)).getSelectedItem();
-		startCasting(device);
 	}
 
 	private void startCasting(CastDevice device) {
@@ -154,46 +100,75 @@ public class SetupCastSessionActivity extends Activity {
 
 	private void disconnect() {
 		stopService(new Intent(this, FireCastService.class));
-		mDeviceManager.stopScan();
 		finish();
 	}
 
+	private MediaRouter mMediaRouter;
+	private MediaRouteButton mMediaRouteButton;
+	private MediaRouteSelector mMediaRouteSelector;
+	private MediaRouter.Callback mMediaRouterCallback;
+
+	private boolean mDeviceScanStarted = false;
+
 	private void startDeviceScan() {
-		mDeviceManager = new DeviceManager(mService.getCastContext());
-		mDeviceManager.addListener(new DeviceManager.Listener() {
-			@Override
-			public void onScanStateChanged(int state) {
-				if (state == DeviceManager.SCAN_SUSPENDED_NETWORK_ERROR) {
-					new AlertDialog.Builder(SetupCastSessionActivity.this)
-							.setMessage("Network Error")
-							.setPositiveButton(R.string.connect_button, null)
-							.create().show();
-				}
-			}
+		MediaRouteHelper.registerMinimalMediaRouteProvider(
+				mService.getCastContext(), this);
+		mMediaRouter = MediaRouter.getInstance(getApplicationContext());
+		mMediaRouteSelector = MediaRouteHelper.buildMediaRouteSelector(
+				MediaRouteHelper.CATEGORY_CAST, null, null);
 
-			@Override
-			public void onDeviceOnline(CastDevice device) {
-				mConnectionDialog.setMessage("Select Device");
-				mConnectionDialog.getButton(RESULT_OK).setEnabled(true);
-				mDeviceAdapter.add(device);
+		mMediaRouteButton = (MediaRouteButton) findViewById(R.id.media_route_button);
+		mMediaRouteButton.setRouteSelector(mMediaRouteSelector);
+		// mMediaRouteButton.setDialogFactory(mDialogFactory);
+		mMediaRouterCallback = new MyMediaRouterCallback();
 
-				checkOKEnabled();
-			}
-
-			@Override
-			public void onDeviceOffline(CastDevice device) {
-				mDeviceAdapter.remove(device);
-				checkOKEnabled();
-			}
-		});
-		mDeviceManager.startScan();
+		mMediaRouter.addCallback(mMediaRouteSelector, mMediaRouterCallback,
+				MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY);
 
 	}
 
-	private void checkOKEnabled() {
-		Button b = mConnectionDialog.getButton(RESULT_OK);
-		if (b != null) {
-			b.setEnabled(mDeviceAdapter.getCount() > 0);
+	@Override
+	public void onDeviceAvailable(CastDevice castDevice, String arg1,
+			MediaRouteStateChangeListener arg2) {
+		startCasting(castDevice);
+
+	}
+
+	@Override
+	public void onSetVolume(double arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onUpdateVolume(double arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
+	private class MyMediaRouterCallback extends MediaRouter.Callback {
+		@Override
+		public void onRouteAdded(MediaRouter router, MediaRouter.RouteInfo info) {
+
+//			Toast.makeText(SetupCastSessionActivity.this,
+//					info.getName() + " added.", Toast.LENGTH_SHORT).show();
+//			mMediaRouteButton.showDialog();
+		}
+
+		@Override
+		public void onRouteSelected(MediaRouter router, RouteInfo route) {
+			MediaRouteHelper.requestCastDeviceForRoute(route);
+		}
+
+		@Override
+		public void onRouteUnselected(MediaRouter router, RouteInfo route) {
+			try {
+				disconnect();
+			} catch (IllegalStateException e) {
+				Log.e(TAG, "onRouteUnselected:");
+				e.printStackTrace();
+			}
 		}
 	}
+
 }

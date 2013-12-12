@@ -1,0 +1,22 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"  >
+
+    <ImageButton
+            android:id="@+id/button_slideshow"
+            android:layout_width="96dp"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/slideshow_button"
+            android:onClick="startSlideshow"
+            android:src="@drawable/slideshow" >
+        </ImageButton>
+        
+    <fragment android:name="com.google.plus.dougnlamb.firecast.MultimediaControlsFragment"
+        android:id="@+id/multimedia_controls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+        />
+
+</LinearLayout>

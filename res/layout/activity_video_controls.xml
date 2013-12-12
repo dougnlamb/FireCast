@@ -4,7 +4,7 @@
     android:gravity="center_vertical" >
 
     <fragment android:name="com.google.plus.dougnlamb.firecast.MultimediaControlsFragment"
-        android:id="@+id/mutlimedia_controls"
+        android:id="@+id/multimedia_controls"
             android:layout_weight="1"
             android:layout_width="0dp"
             android:layout_height="match_parent"

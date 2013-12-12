@@ -199,8 +199,6 @@ public class MultimediaControlsFragment extends Fragment {
 			FireCastService.getInstance().getSession().getMessageStream()
 					.mute();
 
-			startSlideshow();
-
 			makeToast("Mute");
 		} catch (Exception ex) {
 			makeToast(ex.getMessage());
@@ -231,26 +229,7 @@ public class MultimediaControlsFragment extends Fragment {
 		}
 	}
 
-	private boolean mSlideshowStarted = false;
 
-	public void startSlideshow() {
-		if (!mSlideshowStarted) {
-			mSlideshowStarted = true;
-			FireMediaTask task = new FireMediaTask(
-					FireCastService.getInstance(), getActivity()
-							.getBaseContext());
-			Intent intent = new Intent();
-			intent.putExtra("LoadDeviceContent", true);
-			task.execute(intent);
-			try {
-			FireCastService.getInstance().getSession().getMessageStream().startSlideshow();
-			}
-			catch(Exception ex) {
-				Log.e("", ex.getMessage(), ex);
-				makeToast("Failed to start show");
-			}
-		}
-	}
 
 	private void makeToast(String txt) {
 		Toast.makeText(getActivity(), txt, Toast.LENGTH_SHORT).show();

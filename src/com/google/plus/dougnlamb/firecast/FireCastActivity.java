@@ -16,7 +16,6 @@ import android.widget.TextView;
 import com.google.plus.dougnlamb.firecast.FireCastService.LocalBinder;
 
 public class FireCastActivity extends Activity {
-	private boolean mBound;
 	private FireCastService mService;
 
 	@Override
@@ -24,14 +23,15 @@ public class FireCastActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		
 		Intent intent = getIntent();
-
+		
+		
 		setContentView(R.layout.activity_fire_cast);
 
 		try {
 			// Bind to LocalService
 			Intent svcIntent = new Intent(this, FireCastService.class);
 			startService(svcIntent);
-			mBound = bindService(svcIntent, mConnection,
+			bindService(svcIntent, mConnection,
 					Context.BIND_AUTO_CREATE);
 		} catch (Exception ex) {
 			displayException(ex);
@@ -113,7 +113,6 @@ public class FireCastActivity extends Activity {
 				TextView tv = (TextView) findViewById(R.id.fire_cast_status);
 				tv.setText("Attached to service.");
 				tv.invalidate();
-				mBound = true;
 				processRequest();
 			} catch (Exception ex) {
 				displayException(ex);
@@ -122,7 +121,6 @@ public class FireCastActivity extends Activity {
 
 		@Override
 		public void onServiceDisconnected(ComponentName arg0) {
-			mBound = false;
 		}
 	};
 

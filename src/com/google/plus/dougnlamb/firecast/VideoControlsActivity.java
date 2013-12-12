@@ -28,7 +28,7 @@ public class VideoControlsActivity extends FragmentActivity {
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 
-		MultimediaControlsFragment f = (MultimediaControlsFragment) getSupportFragmentManager().findFragmentById(R.id.mutlimedia_controls);
+		MultimediaControlsFragment f = (MultimediaControlsFragment) getSupportFragmentManager().findFragmentById(R.id.multimedia_controls);
 		
 		if( f!= null ) {
 			if( f.handleKeyDown(keyCode, event)) 
