@@ -1,3 +1,5 @@
+The Google Cast SDK has changed greatly since this was written.  Someday I hope to get back to this project and update it to the latest.  Until then, I strongly suggest developers research other solutions.
+
 FireCast
 ========
 
